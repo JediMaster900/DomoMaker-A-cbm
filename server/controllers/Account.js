@@ -56,9 +56,45 @@ const signup = async (req, res) => {
   }
 };
 
+const changePass = (req, res) => {
+  // grab relevant info from request body
+  const username = `${req.body.username}`;
+  const oldPass = `${req.body.oldPass}`;
+  const newPass = `${req.body.newPass}`;
+  const newPass2 = `${req.body.newPass2}`;
+
+  // check if all fields are filled in
+  if (!username || !oldPass || !newPass || !newPass2) {
+    return res.status(400).json({ error: 'All fields are required!' });
+  }
+
+  // check if the new password has been inputted correctly twice
+  if (newPass !== newPass2) {
+    return res.status(400).json({ error: 'New passwords do not match!' });
+  }
+
+  // check if the user's original info is correct, and if so, change the password
+  return Account.authenticate(username, oldPass, async (err, account) => {
+    if (err || !account) {
+      return res.status(401).json({ error: 'Wrong username or password!' });
+    }
+
+    try {
+      const hash = await Account.generateHash(newPass);
+      await Account.findByIdAndUpdate(account._id, { password: hash });
+      console.log('Password updated');
+      return res.json({ redirect: '/login' });
+    } catch (err2) {
+      console.log(err2);
+      return res.status(500).json({ error: 'An error occured!' });
+    }
+  });
+};
+
 module.exports = {
   loginPage,
   login,
   logout,
   signup,
+  changePass,
 };
